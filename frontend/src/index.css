@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-slate-950 text-slate-100 font-sans antialiased;
+    background-image: radial-gradient(ellipse at 20% 50%, rgba(14, 165, 233, 0.04) 0%, transparent 50%),
+                      radial-gradient(ellipse at 80% 20%, rgba(3, 105, 161, 0.06) 0%, transparent 50%);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-brand-500 hover:bg-brand-600 active:bg-brand-700 text-white font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2;
+  }
+  .btn-secondary {
+    @apply bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 border border-slate-700 hover:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2;
+  }
+  .btn-danger {
+    @apply bg-red-500/10 hover:bg-red-500/20 text-red-400 font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 border border-red-500/20 hover:border-red-500/40 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2;
+  }
+  .btn-success {
+    @apply bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 border border-emerald-500/20 hover:border-emerald-500/40 inline-flex items-center gap-2;
+  }
+  .card {
+    @apply bg-slate-900 border border-slate-800 rounded-2xl p-6;
+  }
+  .card-hover {
+    @apply card hover:border-slate-700 transition-all duration-200 hover:shadow-xl hover:shadow-black/20;
+  }
+  .input {
+    @apply bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 rounded-xl px-4 py-3 w-full focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all duration-200;
+  }
+  .label {
+    @apply block text-sm font-medium text-slate-400 mb-1.5;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+  .badge-success { @apply badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/20; }
+  .badge-warning { @apply badge bg-amber-500/10 text-amber-400 border border-amber-500/20; }
+  .badge-danger  { @apply badge bg-red-500/10 text-red-400 border border-red-500/20; }
+  .badge-info    { @apply badge bg-brand-500/10 text-brand-400 border border-brand-500/20; }
+  .badge-gray    { @apply badge bg-slate-700/50 text-slate-400 border border-slate-600; }
+  .stat-card {
+    @apply card flex flex-col gap-1;
+  }
+  .section-title {
+    @apply text-xl font-bold text-slate-100;
+  }
+  .table-header {
+    @apply text-xs font-semibold text-slate-500 uppercase tracking-wider;
+  }
+  .table-row {
+    @apply border-b border-slate-800 hover:bg-slate-800/50 transition-colors;
+  }
+  .table-cell {
+    @apply px-4 py-3 text-sm text-slate-300;
+  }
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-all duration-200 font-medium text-sm;
+  }
+  .sidebar-link-active {
+    @apply sidebar-link bg-brand-500/10 text-brand-400 border border-brand-500/20 hover:bg-brand-500/15;
+  }
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+  }
+  .modal-content {
+    @apply bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto;
+  }
+  .form-group { @apply space-y-1.5; }
+  .divider { @apply border-t border-slate-800; }
+  .glow { box-shadow: 0 0 40px rgba(14, 165, 233, 0.15); }
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0f172a; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+.animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
+.animate-slide-up { animation: slideUp 0.4s ease-out; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
