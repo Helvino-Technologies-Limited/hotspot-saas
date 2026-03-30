@@ -10,6 +10,9 @@ const { pool } = require('./utils/db');
 
 const app = express();
 
+// Trust reverse proxy (required for Render.com and similar platforms)
+app.set('trust proxy', 1);
+
 // Security
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({
@@ -66,14 +69,18 @@ app.listen(PORT, async () => {
   console.log(`\n🚀 HOTSPOT-SaaS API running on port ${PORT}`);
   console.log(`📡 Environment: ${process.env.NODE_ENV}`);
   console.log(`🔗 Health: http://localhost:${PORT}/health`);
-  
+
   try {
     await pool.query('SELECT 1');
     console.log('✅ Database connected');
+
+    // Run incremental schema upgrades
+    await pool.query('ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ');
+    console.log('✅ Schema up to date');
   } catch (e) {
-    console.error('❌ Database connection failed:', e.message);
+    console.error('❌ Database startup error:', e.message);
   }
-  
+
   startCronJobs();
 });
 
