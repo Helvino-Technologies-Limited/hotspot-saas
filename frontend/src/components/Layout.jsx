@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   LayoutDashboard, Package, Ticket, CreditCard, Activity, Router,
   Users, Settings, LogOut, Menu, X, Wifi, ChevronRight, Bell,
-  Shield, BarChart3, Building2
+  Shield, BarChart3, Building2, BookOpen
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -33,12 +33,13 @@ export default function Layout({ children }) {
     { to: '/sessions', icon: Activity, label: 'Sessions' },
     { to: '/routers', icon: Router, label: 'Routers' },
     { to: '/settings', icon: Settings, label: 'Settings' },
+    { to: '/manual', icon: BookOpen, label: 'User Manual' },
   ];
 
   const superAdminLinks = [
     { to: '/superadmin', icon: LayoutDashboard, label: 'Overview' },
     { to: '/superadmin/tenants', icon: Building2, label: 'Tenants' },
-    { to: '/superadmin/revenue', icon: BarChart3, label: 'Revenue' },
+    { to: '/superadmin/manual', icon: BookOpen, label: 'User Manual' },
   ];
 
   const links = isSuperAdmin ? superAdminLinks : adminLinks;

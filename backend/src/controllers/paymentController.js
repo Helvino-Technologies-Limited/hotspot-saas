@@ -3,9 +3,37 @@ const { generateVoucherCode } = require('../utils/helpers');
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 
-const getMpesaToken = async () => {
-  const auth = Buffer.from(`${process.env.MPESA_CONSUMER_KEY}:${process.env.MPESA_CONSUMER_SECRET}`).toString('base64');
-  const url = process.env.MPESA_ENV === 'production'
+/**
+ * Resolve M-Pesa credentials: prefer tenant settings, fall back to env vars
+ */
+const getMpesaCreds = async (tenantId) => {
+  if (tenantId) {
+    const t = await query('SELECT settings FROM tenants WHERE id=$1', [tenantId]);
+    const mpesa = t.rows[0]?.settings?.mpesa;
+    if (mpesa?.consumerKey && mpesa?.shortcode) {
+      return {
+        consumerKey: mpesa.consumerKey,
+        consumerSecret: mpesa.consumerSecret,
+        shortcode: mpesa.shortcode,
+        passkey: mpesa.passkey,
+        env: mpesa.env || 'sandbox',
+        callbackUrl: mpesa.callbackUrl || process.env.MPESA_CALLBACK_URL,
+      };
+    }
+  }
+  return {
+    consumerKey: process.env.MPESA_CONSUMER_KEY,
+    consumerSecret: process.env.MPESA_CONSUMER_SECRET,
+    shortcode: process.env.MPESA_SHORTCODE,
+    passkey: process.env.MPESA_PASSKEY,
+    env: process.env.MPESA_ENV || 'sandbox',
+    callbackUrl: process.env.MPESA_CALLBACK_URL,
+  };
+};
+
+const getMpesaToken = async (creds) => {
+  const auth = Buffer.from(`${creds.consumerKey}:${creds.consumerSecret}`).toString('base64');
+  const url = creds.env === 'production'
     ? 'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
     : 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
   const res = await axios.get(url, { headers: { Authorization: `Basic ${auth}` } });
@@ -38,50 +66,53 @@ const initiateMpesaSTK = async (req, res) => {
     if (!phone.startsWith('254')) phone = '254' + phone;
 
     const reference = uuidv4().replace(/-/g, '').substring(0, 12).toUpperCase();
-    
+
     // Create pending payment
     const paymentRes = await query(`
       INSERT INTO payments (tenant_id, package_id, amount, method, reference, phone_number, status)
       VALUES ($1,$2,$3,'mpesa',$4,$5,'pending') RETURNING *
     `, [tenantId, packageId, pack.price, reference, phone]);
-    
+
     const payment = paymentRes.rows[0];
 
+    // Resolve per-tenant credentials
+    const creds = await getMpesaCreds(tenantId);
+
     // For demo/sandbox, simulate success
-    if (process.env.MPESA_ENV === 'sandbox' || !process.env.MPESA_CONSUMER_KEY || process.env.MPESA_CONSUMER_KEY === 'your_consumer_key') {
+    if (creds.env === 'sandbox' || !creds.consumerKey || creds.consumerKey === 'your_consumer_key') {
       // Auto-complete after 3 seconds in sandbox
       setTimeout(async () => {
         try {
           await completPayment(payment.id, 'SANDBOX' + reference);
         } catch(e) { console.error('Sandbox auto-complete error:', e); }
       }, 3000);
-      
+
       return res.json({
         success: true,
-        message: 'Payment request sent to phone (sandbox mode - auto-completing)',
+        message: 'Payment request sent to phone (sandbox mode — auto-completing in 3s)',
         paymentId: payment.id,
         reference,
         sandbox: true
       });
     }
 
-    // Real M-Pesa STK Push
-    const token = await getMpesaToken();
+    // Real M-Pesa STK Push using tenant credentials
+    const token = await getMpesaToken(creds);
     const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
-    const password = Buffer.from(`${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`).toString('base64');
+    const password = Buffer.from(`${creds.shortcode}${creds.passkey}${timestamp}`).toString('base64');
 
     const stkRes = await axios.post(
       'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest',
       {
-        BusinessShortCode: process.env.MPESA_SHORTCODE,
+        BusinessShortCode: creds.shortcode,
         Password: password,
         Timestamp: timestamp,
         TransactionType: 'CustomerPayBillOnline',
         Amount: Math.ceil(pack.price),
         PartyA: phone,
-        PartyB: process.env.MPESA_SHORTCODE,
+        PartyB: creds.shortcode,
         PhoneNumber: phone,
-        CallBackURL: process.env.MPESA_CALLBACK_URL,
+        CallBackURL: creds.callbackUrl,
         AccountReference: reference,
         TransactionDesc: `WiFi ${pack.name}`,
       },

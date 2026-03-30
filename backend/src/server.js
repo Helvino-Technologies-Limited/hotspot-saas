@@ -52,6 +52,7 @@ app.use('/api/vouchers', require('./routes/vouchers'));
 app.use('/api/sessions', require('./routes/sessions'));
 app.use('/api/routers', require('./routes/routers'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/settings', require('./routes/settings'));
 
 // 404
 app.use((req, res) => res.status(404).json({ success: false, message: 'Route not found' }));

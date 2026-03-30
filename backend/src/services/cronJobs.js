@@ -1,18 +1,40 @@
 const cron = require('node-cron');
 const { query } = require('../utils/db');
+const { disconnectUser } = require('./mikrotikService');
 
 const expireVouchers = async () => {
   try {
+    // Find vouchers about to expire
     const result = await query(`
       UPDATE vouchers SET status='expired', updated_at=NOW()
       WHERE status='active' AND expires_at < NOW()
-      RETURNING id
+      RETURNING id, code, tenant_id
     `);
+
     if (result.rowCount > 0) {
+      const voucherIds = result.rows.map(r => r.id);
+
+      // Expire sessions
       await query(`
         UPDATE sessions SET status='expired', end_time=NOW()
         WHERE voucher_id = ANY($1::uuid[]) AND status='active'
-      `, [result.rows.map(r => r.id)]);
+      `, [voucherIds]);
+
+      // Disconnect from MikroTik routers that have use_api enabled
+      for (const voucher of result.rows) {
+        try {
+          const routers = await query(
+            `SELECT * FROM routers WHERE tenant_id=$1 AND status='active' AND use_api=true AND type='MikroTik'`,
+            [voucher.tenant_id]
+          );
+          for (const router of routers.rows) {
+            await disconnectUser(router, voucher.code);
+          }
+        } catch (err) {
+          console.error(`Router disconnect error for voucher ${voucher.code}:`, err.message);
+        }
+      }
+
       console.log(`Expired ${result.rowCount} vouchers`);
     }
   } catch (error) {
@@ -32,10 +54,8 @@ const cleanupExpiredPayments = async () => {
 };
 
 const startCronJobs = () => {
-  // Every minute: expire vouchers
-  cron.schedule('* * * * *', expireVouchers);
-  // Every 15 minutes: cleanup pending payments
-  cron.schedule('*/15 * * * *', cleanupExpiredPayments);
+  cron.schedule('* * * * *', expireVouchers);          // Every minute
+  cron.schedule('*/15 * * * *', cleanupExpiredPayments); // Every 15 minutes
   console.log('Cron jobs started');
 };
 
