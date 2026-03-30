@@ -142,8 +142,14 @@ const updateTenant = async (req, res) => {
 const toggleTenantStatus = async (req, res) => {
   try {
     const { id } = req.params;
+    // Activate → inactive, any inactive/trial/suspended → active
     const result = await query(
-      `UPDATE tenants SET status = CASE WHEN status='active' THEN 'inactive' ELSE 'active' END, updated_at=NOW() WHERE id=$1 RETURNING *`,
+      `UPDATE tenants SET
+        status = CASE WHEN status='active' THEN 'inactive' ELSE 'active' END,
+        first_payment_paid = CASE WHEN status != 'active' THEN TRUE ELSE first_payment_paid END,
+        subscription_expires_at = CASE WHEN status != 'active' THEN NOW() + INTERVAL '1 year' ELSE subscription_expires_at END,
+        updated_at = NOW()
+       WHERE id=$1 RETURNING *`,
       [id]
     );
     if (!result.rows.length) return res.status(404).json({ success: false, message: 'Tenant not found' });

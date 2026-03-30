@@ -53,9 +53,25 @@ const cleanupExpiredPayments = async () => {
   }
 };
 
+const deactivateExpiredTrials = async () => {
+  try {
+    const result = await query(`
+      UPDATE tenants SET status='inactive', updated_at=NOW()
+      WHERE status='trial' AND trial_ends_at < NOW()
+      RETURNING id, name, email
+    `);
+    if (result.rowCount > 0) {
+      console.log(`Deactivated ${result.rowCount} expired trial account(s):`, result.rows.map(r => r.name).join(', '));
+    }
+  } catch (error) {
+    console.error('Cron deactivate trials error:', error);
+  }
+};
+
 const startCronJobs = () => {
-  cron.schedule('* * * * *', expireVouchers);          // Every minute
+  cron.schedule('* * * * *', expireVouchers);            // Every minute
   cron.schedule('*/15 * * * *', cleanupExpiredPayments); // Every 15 minutes
+  cron.schedule('0 * * * *', deactivateExpiredTrials);   // Every hour
   console.log('Cron jobs started');
 };
 

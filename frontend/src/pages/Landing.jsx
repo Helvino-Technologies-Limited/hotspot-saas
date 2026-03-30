@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Wifi, Shield, CreditCard, Clock, BarChart3, Router, CheckCircle2, Phone, Mail, Globe, ArrowRight, Zap, Users, Lock } from 'lucide-react';
+import { Wifi, Shield, CreditCard, Clock, BarChart3, Router, CheckCircle2, Phone, Mail, Globe, ArrowRight, Zap, Users, Lock, Building2 } from 'lucide-react';
 
 export default function Landing() {
   const features = [
@@ -12,8 +12,8 @@ export default function Landing() {
   ];
 
   const plans = [
-    { name: 'Setup Fee', price: 'KES 70,000', period: 'one-time', features: ['Full system setup', 'Custom branding', 'Router configuration', '3 months support', 'Training included'], cta: 'Get Started' },
-    { name: 'Annual', price: 'KES 50,000', period: 'per year', features: ['All features', 'Unlimited vouchers', 'Priority support', 'Regular updates', 'SLA guarantee'], cta: 'Subscribe', highlight: true },
+    { name: 'First Year', price: 'KES 70,000', period: 'one-time (year 1)', features: ['Full system setup', 'Custom branding', 'Router configuration', 'Priority support', 'Training included'], cta: 'Register Free Trial' },
+    { name: 'Annual Renewal', price: 'KES 20,000', period: 'per year (from year 2)', features: ['All features included', 'Unlimited vouchers', 'Priority support', 'Regular updates', 'SLA guarantee'], cta: 'Register Free Trial', highlight: true },
   ];
 
   return (
@@ -32,7 +32,10 @@ export default function Landing() {
             <a href="#pricing" className="hover:text-slate-100 transition-colors">Pricing</a>
             <a href="#contact" className="hover:text-slate-100 transition-colors">Contact</a>
           </div>
-          <Link to="/login" className="btn-primary py-2 px-4 text-sm">Admin Login</Link>
+          <div className="flex items-center gap-3">
+            <Link to="/register" className="btn-primary py-2 px-4 text-sm">Register Free</Link>
+            <Link to="/login" className="btn-secondary py-2 px-4 text-sm">Login</Link>
+          </div>
         </div>
       </nav>
 
@@ -56,13 +59,14 @@ export default function Landing() {
             Built for Kenyan ISPs, hotels, schools, and estates.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/login" className="btn-primary py-3 px-8 text-base">
-              Access Dashboard <ArrowRight size={18} />
+            <Link to="/register" className="btn-primary py-3 px-8 text-base">
+              Start Free Trial <ArrowRight size={18} />
             </Link>
             <Link to="/portal/demo-isp" className="btn-secondary py-3 px-8 text-base">
               View Demo Portal
             </Link>
           </div>
+          <p className="text-sm text-slate-500 mt-4">5-day free trial · No payment required to start</p>
           <div className="flex items-center justify-center gap-8 mt-12 text-sm text-slate-500">
             {['M-Pesa First', 'MikroTik Ready', 'Multi-Tenant'].map(t => (
               <span key={t} className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-500" />{t}</span>
@@ -162,9 +166,9 @@ export default function Landing() {
                     </li>
                   ))}
                 </ul>
-                <a href="#contact" className={`w-full text-center block py-2.5 rounded-xl font-semibold transition-all ${p.highlight ? 'btn-primary justify-center' : 'btn-secondary justify-center'}`}>
+                <Link to="/register" className={`w-full text-center block py-2.5 rounded-xl font-semibold transition-all ${p.highlight ? 'btn-primary justify-center' : 'btn-secondary justify-center'}`}>
                   {p.cta}
-                </a>
+                </Link>
               </div>
             ))}
           </div>
@@ -176,7 +180,7 @@ export default function Landing() {
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-4xl font-bold text-slate-100 mb-4">Get In Touch</h2>
           <p className="text-slate-400 mb-10">Contact Helvino Technologies for licensing and support</p>
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-3 gap-4 mb-8">
             {[
               { icon: Globe, label: 'Website', value: 'helvino.org', href: 'https://helvino.org' },
               { icon: Mail, label: 'Email', value: 'info@helvino.org', href: 'mailto:info@helvino.org' },
@@ -190,6 +194,20 @@ export default function Landing() {
                 <div className="text-sm font-semibold text-slate-300 group-hover:text-brand-400 transition-colors">{c.value}</div>
               </a>
             ))}
+          </div>
+          {/* Payment Info */}
+          <div className="card text-left max-w-md mx-auto border-brand-500/20 bg-brand-500/5">
+            <div className="flex items-center gap-2 mb-3">
+              <CreditCard size={16} className="text-brand-400" />
+              <span className="font-semibold text-brand-400 text-sm">Payment via M-Pesa Paybill</span>
+            </div>
+            <div className="space-y-1.5 text-sm">
+              <div className="flex justify-between"><span className="text-slate-500">Paybill No</span><span className="font-bold text-slate-200">522533</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Account No</span><span className="font-bold text-slate-200">8071524</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Name</span><span className="font-bold text-slate-200">Helvino Technologies Ltd</span></div>
+              <div className="flex justify-between pt-1 border-t border-slate-800"><span className="text-slate-500">Year 1</span><span className="font-bold text-brand-400">KES 70,000</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Year 2+</span><span className="font-bold text-brand-400">KES 20,000/yr</span></div>
+            </div>
           </div>
         </div>
       </section>

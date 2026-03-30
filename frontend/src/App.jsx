@@ -6,6 +6,8 @@ import LoadingSpinner from './components/LoadingSpinner';
 
 import Landing from './pages/Landing';
 import Login from './pages/Login';
+import Register from './pages/Register';
+import AccountSuspended from './pages/AccountSuspended';
 import Dashboard from './pages/Dashboard';
 import Packages from './pages/Packages';
 import Vouchers from './pages/Vouchers';
@@ -23,13 +25,21 @@ const PrivateRoute = ({ children, roles }) => {
   if (loading) return <LoadingSpinner fullScreen />;
   if (!user) return <Navigate to="/login" replace />;
   if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" replace />;
+  if (user.role !== 'superadmin' && ['inactive', 'suspended'].includes(user.tenantStatus)) {
+    return <AccountSuspended />;
+  }
   return <Layout>{children}</Layout>;
 };
 
 const PublicRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return <LoadingSpinner fullScreen />;
-  if (user) return <Navigate to={user.role === 'superadmin' ? '/superadmin' : '/dashboard'} replace />;
+  if (user) {
+    if (user.role !== 'superadmin' && ['inactive', 'suspended'].includes(user.tenantStatus)) {
+      return <AccountSuspended />;
+    }
+    return <Navigate to={user.role === 'superadmin' ? '/superadmin' : '/dashboard'} replace />;
+  }
   return children;
 };
 
@@ -38,6 +48,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
       <Route path="/portal/:tenantSlug" element={<CaptivePortal />} />
 
       {/* Admin Routes */}

@@ -101,6 +101,13 @@ export default function Tenants() {
               <div>💰 Total Revenue: <span className="text-emerald-400 font-semibold">{formatCurrency(t.total_revenue || 0)}</span></div>
               <div>🎟 Vouchers: {t.voucher_count || 0} · Users: {t.user_count || 0}</div>
               <div>📅 Joined: {formatDate(t.created_at)}</div>
+              {t.status === 'trial' && t.trial_ends_at && (
+                <div className="text-amber-400">⏳ Trial ends: {formatDate(t.trial_ends_at)}</div>
+              )}
+              {t.first_payment_paid
+                ? <div className="text-emerald-400">✅ Subscription paid</div>
+                : <div className="text-slate-600">💳 Awaiting first payment (KES 70,000)</div>
+              }
             </div>
 
             <div className="flex gap-2 pt-3 border-t border-slate-800">

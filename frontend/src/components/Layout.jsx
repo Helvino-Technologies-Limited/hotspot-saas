@@ -4,9 +4,30 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   LayoutDashboard, Package, Ticket, CreditCard, Activity, Router,
   Users, Settings, LogOut, Menu, X, Wifi, ChevronRight, Bell,
-  Shield, BarChart3, Building2, BookOpen
+  Shield, BarChart3, Building2, BookOpen, AlertCircle, Clock
 } from 'lucide-react';
 import clsx from 'clsx';
+
+function TrialBanner({ trialEndsAt }) {
+  const now = new Date();
+  const end = new Date(trialEndsAt);
+  const daysLeft = Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)));
+  const urgent = daysLeft <= 1;
+
+  return (
+    <div className={`flex items-center justify-between px-6 py-2 text-xs font-medium ${urgent ? 'bg-red-500/10 border-b border-red-500/20 text-red-400' : 'bg-amber-500/10 border-b border-amber-500/20 text-amber-400'}`}>
+      <div className="flex items-center gap-2">
+        <Clock size={12} />
+        {daysLeft === 0
+          ? 'Your free trial expires today!'
+          : `Free trial: ${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining`}
+      </div>
+      <a href="tel:0110421320" className="underline hover:no-underline">
+        Pay now: Paybill 522533 · A/C 8071524 · KES 70,000
+      </a>
+    </div>
+  );
+}
 
 const NavLink = ({ to, icon: Icon, label, onClick }) => {
   const { pathname } = useLocation();
@@ -100,7 +121,13 @@ export default function Layout({ children }) {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden">
+      {/* Trial banner */}
+      {!isSuperAdmin && user?.tenantStatus === 'trial' && user?.trialEndsAt && (
+        <TrialBanner trialEndsAt={user.trialEndsAt} />
+      )}
+
+      <div className="flex flex-1 overflow-hidden">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex flex-col w-64 bg-slate-950 border-r border-slate-800 flex-shrink-0">
         <SidebarContent />
@@ -148,6 +175,7 @@ export default function Layout({ children }) {
             {children}
           </div>
         </main>
+      </div>
       </div>
     </div>
   );

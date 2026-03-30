@@ -1,8 +1,9 @@
 const router = require('express').Router();
-const { login, me, changePassword } = require('../controllers/authController');
+const { login, me, changePassword, registerTenant } = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 
 router.post('/login', login);
+router.post('/register', registerTenant);
 router.get('/me', authenticate, me);
 router.put('/change-password', authenticate, changePassword);
 

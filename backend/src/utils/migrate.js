@@ -154,6 +154,11 @@ const migrate = async () => {
       CREATE INDEX IF NOT EXISTS idx_packages_tenant ON packages(tenant_id);
     `);
 
+    // Add trial_ends_at column if it doesn't exist (idempotent upgrade)
+    await client.query(`
+      ALTER TABLE tenants ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ;
+    `);
+
     console.log('Migration completed successfully!');
   } catch (error) {
     console.error('Migration failed:', error);
