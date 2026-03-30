@@ -39,7 +39,6 @@ export default function Layout({ children }) {
   const superAdminLinks = [
     { to: '/superadmin', icon: LayoutDashboard, label: 'Overview' },
     { to: '/superadmin/tenants', icon: Building2, label: 'Tenants' },
-    { to: '/superadmin/manual', icon: BookOpen, label: 'User Manual' },
   ];
 
   const links = isSuperAdmin ? superAdminLinks : adminLinks;

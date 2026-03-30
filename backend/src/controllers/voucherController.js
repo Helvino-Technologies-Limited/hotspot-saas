@@ -90,10 +90,39 @@ const redeemVoucher = async (req, res) => {
     }
 
     const voucher = voucherRes.rows[0];
+
+    // --- Single-device enforcement ---
+    // Get the package device_limit
+    const pkgRes = await query('SELECT device_limit FROM packages WHERE id=$1', [voucher.package_id]);
+    const deviceLimit = pkgRes.rows[0]?.device_limit || 1;
+
+    // Check existing active sessions for this voucher
+    const activeSessions = await query(
+      `SELECT mac_address FROM sessions WHERE voucher_id=$1 AND status='active'`,
+      [voucher.id]
+    );
+
+    if (activeSessions.rowCount >= deviceLimit) {
+      // Check if this MAC is already in the allowed list
+      const knownMac = activeSessions.rows.find(s => s.mac_address === macAddress);
+      if (!knownMac) {
+        return res.status(403).json({
+          success: false,
+          message: `This voucher is already in use on ${deviceLimit === 1 ? 'another device' : `${deviceLimit} devices`}. Each code works on ${deviceLimit} device${deviceLimit > 1 ? 's' : ''} only.`,
+        });
+      }
+    }
+
     const expiresAt = new Date(Date.now() + voucher.duration_minutes * 60 * 1000);
 
-    await query(`UPDATE vouchers SET status='active', activated_at=NOW(), expires_at=$1, updated_at=NOW() WHERE id=$2`,
-      [expiresAt, voucher.id]);
+    // Bind first MAC to the voucher record
+    const bindMac = activeSessions.rowCount === 0 && macAddress ? macAddress : undefined;
+    await query(
+      `UPDATE vouchers SET status='active', activated_at=NOW(), expires_at=$1, updated_at=NOW()
+       ${bindMac ? ', bound_mac=$3' : ''}
+       WHERE id=$2`,
+      bindMac ? [expiresAt, voucher.id, bindMac] : [expiresAt, voucher.id]
+    );
 
     await query(`
       INSERT INTO sessions (voucher_id, tenant_id, mac_address, ip_address, username)

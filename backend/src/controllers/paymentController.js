@@ -1,5 +1,6 @@
 const { query } = require('../utils/db');
 const { generateVoucherCode } = require('../utils/helpers');
+const { sendVoucherSms } = require('../services/smsService');
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 
@@ -141,12 +142,22 @@ const completPayment = async (paymentId, mpesaReceipt) => {
   const pack = pkg.rows[0];
 
   const code = generateVoucherCode();
-  const expiresAt = null; // Expires when first used + duration
 
   await query(`
-    INSERT INTO vouchers (tenant_id, package_id, payment_id, code, status, phone_number, expires_at)
-    VALUES ($1,$2,$3,$4,'unused',$5,$6)
-  `, [payment.tenant_id, payment.package_id, payment.id, code, payment.phone_number, expiresAt]);
+    INSERT INTO vouchers (tenant_id, package_id, payment_id, code, status, phone_number)
+    VALUES ($1,$2,$3,$4,'unused',$5)
+  `, [payment.tenant_id, payment.package_id, payment.id, code, payment.phone_number]);
+
+  // Send SMS with voucher code
+  if (payment.phone_number) {
+    try {
+      const tenant = await query('SELECT name FROM tenants WHERE id=$1', [payment.tenant_id]);
+      const tenantName = tenant.rows[0]?.name || 'WiFi Hotspot';
+      await sendVoucherSms(payment.phone_number, code, pack.name, tenantName);
+    } catch (smsErr) {
+      console.error('SMS send error:', smsErr.message);
+    }
+  }
 
   return code;
 };
@@ -242,4 +253,95 @@ const getPayments = async (req, res) => {
   }
 };
 
-module.exports = { initiateMpesaSTK, mpesaCallback, checkPaymentStatus, getPayments };
+/**
+ * POST /api/payments/manual
+ * Customer submits a manual payment reference (Paybill/Till/Airtel).
+ * Creates a pending payment and immediately generates a provisional voucher.
+ * Admin can revoke if payment is not confirmed.
+ */
+const submitManualPayment = async (req, res) => {
+  try {
+    const { packageId, phoneNumber, tenantSlug, method, reference } = req.body;
+    if (!packageId || !phoneNumber || !method || !reference) {
+      return res.status(400).json({ success: false, message: 'Package, phone, method and reference required' });
+    }
+
+    let tenantId;
+    const t = await query('SELECT id FROM tenants WHERE slug=$1 AND status=$2', [tenantSlug, 'active']);
+    if (!t.rows.length) return res.status(404).json({ success: false, message: 'Provider not found' });
+    tenantId = t.rows[0].id;
+
+    const pkg = await query('SELECT * FROM packages WHERE id=$1 AND tenant_id=$2 AND status=$3', [packageId, tenantId, 'active']);
+    if (!pkg.rows.length) return res.status(404).json({ success: false, message: 'Package not found' });
+    const pack = pkg.rows[0];
+
+    let phone = phoneNumber.replace(/\D/g, '');
+    if (phone.startsWith('0')) phone = '254' + phone.slice(1);
+    if (!phone.startsWith('254')) phone = '254' + phone;
+
+    // Check reference not already used
+    const existing = await query('SELECT id FROM payments WHERE reference=$1', [reference.trim().toUpperCase()]);
+    if (existing.rows.length) {
+      return res.status(409).json({ success: false, message: 'This reference has already been used' });
+    }
+
+    // Create payment record — pending, needs admin confirmation
+    const paymentRes = await query(`
+      INSERT INTO payments (tenant_id, package_id, amount, method, reference, phone_number, status, metadata)
+      VALUES ($1,$2,$3,$4,$5,$6,'pending',$7) RETURNING *
+    `, [tenantId, pack.id, pack.price, method, reference.trim().toUpperCase(), phone, JSON.stringify({ manualEntry: true })]);
+
+    const payment = paymentRes.rows[0];
+
+    // Generate provisional voucher immediately so customer isn't waiting
+    const code = generateVoucherCode();
+    await query(`
+      INSERT INTO vouchers (tenant_id, package_id, payment_id, code, status, phone_number)
+      VALUES ($1,$2,$3,$4,'unused',$5)
+    `, [tenantId, pack.id, payment.id, code, phone]);
+
+    // Send SMS
+    try {
+      const tenant = await query('SELECT name FROM tenants WHERE id=$1', [tenantId]);
+      const tenantName = tenant.rows[0]?.name || 'WiFi Hotspot';
+      await sendVoucherSms(phone, code, pack.name, tenantName);
+    } catch (smsErr) {
+      console.error('SMS error:', smsErr.message);
+    }
+
+    res.json({
+      success: true,
+      message: 'Payment recorded. Your voucher code has been sent via SMS.',
+      paymentId: payment.id,
+      voucherCode: code,
+      packageName: pack.name,
+      durationMinutes: pack.duration_minutes,
+      amount: pack.price,
+    });
+  } catch (error) {
+    console.error('Manual payment error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+/**
+ * POST /api/payments/:id/confirm  (admin only)
+ * Marks a manual payment as completed.
+ */
+const confirmManualPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user.tenant_id;
+    const result = await query(
+      `UPDATE payments SET status='completed', updated_at=NOW()
+       WHERE id=$1 AND tenant_id=$2 AND status='pending' RETURNING *`,
+      [id, tenantId]
+    );
+    if (!result.rows.length) return res.status(404).json({ success: false, message: 'Payment not found or already processed' });
+    res.json({ success: true, message: 'Payment confirmed' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+module.exports = { initiateMpesaSTK, mpesaCallback, checkPaymentStatus, getPayments, submitManualPayment, confirmManualPayment };

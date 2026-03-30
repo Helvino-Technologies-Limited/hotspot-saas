@@ -26,12 +26,42 @@ const getPublicPackages = async (req, res) => {
       [tenantSlug]
     );
     if (!tenantRes.rows.length) return res.status(404).json({ success: false, message: 'Provider not found' });
-    const tenant = tenantRes.rows[0];
+    const row = tenantRes.rows[0];
+    const settings = row.settings || {};
+
+    // Build safe public payment options (no API secrets)
+    const mpesa = settings.mpesa || {};
+    const bank = settings.bank || {};
+    const portal = settings.portal || {};
+
+    const paymentOptions = {
+      stkPush: !!(mpesa.consumerKey && mpesa.shortcode),   // STK Push available
+      paybill: bank.paybill || null,
+      tillNumber: bank.tillNumber || null,
+      airtelMoney: bank.airtelMoneyCode || null,
+      bankName: bank.bankName || null,
+      bankAccount: bank.accountNumber || null,
+      bankAccountName: bank.accountName || null,
+    };
+
+    const tenant = {
+      id: row.id,
+      name: row.name,
+      primary_color: row.primary_color,
+      secondary_color: row.secondary_color,
+      logo_url: row.logo_url,
+      ssid: portal.ssid || null,
+      welcomeMessage: portal.welcomeMessage || null,
+      supportPhone: portal.supportPhone || null,
+      supportEmail: portal.supportEmail || null,
+      footerText: portal.footerText || null,
+      paymentOptions,
+    };
 
     const packages = await query(
       `SELECT id, name, description, price, duration_minutes, speed_limit_mbps, device_limit, data_limit_mb
        FROM packages WHERE tenant_id = $1 AND status = 'active' ORDER BY sort_order, price`,
-      [tenant.id]
+      [row.id]
     );
 
     res.json({ success: true, tenant, packages: packages.rows });

@@ -48,12 +48,11 @@ function AppRoutes() {
       <Route path="/sessions" element={<PrivateRoute roles={['admin','staff']}><Sessions /></PrivateRoute>} />
       <Route path="/routers" element={<PrivateRoute roles={['admin']}><Routers /></PrivateRoute>} />
       <Route path="/settings" element={<PrivateRoute roles={['admin','staff']}><Settings /></PrivateRoute>} />
-      <Route path="/manual" element={<PrivateRoute roles={['admin','staff','superadmin']}><UserManual /></PrivateRoute>} />
+      <Route path="/manual" element={<PrivateRoute roles={['admin','staff']}><UserManual /></PrivateRoute>} />
 
       {/* Super Admin Routes */}
       <Route path="/superadmin" element={<PrivateRoute roles={['superadmin']}><SuperDashboard /></PrivateRoute>} />
       <Route path="/superadmin/tenants" element={<PrivateRoute roles={['superadmin']}><Tenants /></PrivateRoute>} />
-      <Route path="/superadmin/manual" element={<PrivateRoute roles={['superadmin']}><UserManual /></PrivateRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
